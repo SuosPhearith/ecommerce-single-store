@@ -3,11 +3,18 @@ const catchAsync = require("express-async-handler");
 const AppError = require("../utils/appError");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const Account = require("../models/accountModel");
 
 // generateToken
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRES_DATE,
+  });
+};
+// generateRefreshToken
+const generateRefreshToken = (id) => {
+  return jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
   });
 };
 // create sent token to client
@@ -16,14 +23,18 @@ const sentToken = (user, res) => {
   user.password = undefined;
   // generate token
   const token = generateToken(user._id);
+  // generate refresh token
+  const refreshToken = generateRefreshToken(user._id);
   // sent cookie and json
-  res.cookie("token", token, {
+  res.cookie("refreshToken", refreshToken, {
     path: "/",
     httpOnly: true,
-    maxAge: process.env.COOKIE_EXPIRES_DATE * 24 * 60 * 60 * 1000,
+    secure: true,
+    sameSite: "None",
+    maxAge: process.env.REFRESH_TOKEN_EXPIRES_DATE * 24 * 60 * 60 * 1000,
   });
 
-  res.status(201).json({
+  res.status(200).json({
     status: "success",
     token,
     data: { user },
@@ -64,13 +75,27 @@ const login = catchAsync(async (req, res) => {
     throw new AppError("Incorrect password", 400);
   }
 });
+// login social media
+const loginSocialMeia = catchAsync(async (req, res) => {
+  const user = req.user;
+  const refreshToken = generateRefreshToken(user.id);
+  res.cookie("refreshToken", refreshToken, {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: process.env.REFRESH_TOKEN_EXPIRES_DATE * 24 * 60 * 60 * 1000,
+  });
+  res.redirect(process.env.CLIENT_HOME);
+});
 // logout
 const logout = catchAsync(async (req, res) => {
   // clear token in cookie
-  res.cookie("token", "", {
+  res.clearCookie("refreshToken", {
     path: "/",
     httpOnly: true,
-    maxAge: process.env.COOKIE_EXPIRES_DATE * 24 * 60 * 60 * 1000,
+    secure: true,
+    sameSite: "None",
   });
 
   res.status(201).json({ message: "success" });
@@ -123,13 +148,42 @@ const restrictTo = (...roles) => {
 };
 // login status
 const getLoginStatus = catchAsync(async (req, res) => {
-  const token = req.cookies.token;
-  if (!token) return res.json(false);
-  // verify token
-  const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-  if (decoded) return res.json(true);
-  else return res.json(false);
+  const token = req.cookies.refreshToken;
+
+  if (!token) {
+    return res.status(401).json({
+      status: "fail",
+      message: "Unauthorized",
+    });
+  }
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+
+    let user = await User.findOne({ _id: decoded.id }).select("+active");
+    if (user === null) {
+      user = await Account.findOne({ _id: decoded.id }).select("+active");
+    }
+    if (!user.active) {
+      return res.status(401).json({
+        status: "fail",
+        message: "Account was banned",
+      });
+    }
+
+    return res.json({
+      status: "success",
+      data: { user },
+    });
+  } catch (err) {
+    return res.status(401).json({
+      status: "fail",
+      message: "Token verification failed",
+    });
+  }
 });
+
 // reset password
 const resetPassword = catchAsync(async (req, res) => {
   // get data from user
@@ -157,6 +211,30 @@ const resetPassword = catchAsync(async (req, res) => {
     data: { user },
   });
 });
+// refresh token
+const refresh = catchAsync(async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) throw new AppError("Forbidden");
+  // verify token
+  const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+  // check user is still exist
+  let currentUser = await User.findOne({ _id: decoded.id }).select("+active");
+  if (currentUser === null) {
+    currentUser = await Account.findOne({ _id: decoded.id }).select("+active");
+  }
+  // continue
+  if (!currentUser) {
+    throw new AppError(
+      "The user belonging to this token does no longer exist",
+      401
+    );
+  } else {
+    // check account ban or not
+    if (!currentUser.active) throw new AppError("account was ban", 403);
+    sentToken(currentUser, res);
+  }
+});
+
 module.exports = {
   register,
   login,
@@ -165,4 +243,6 @@ module.exports = {
   restrictTo,
   getLoginStatus,
   resetPassword,
+  refresh,
+  loginSocialMeia,
 };

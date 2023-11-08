@@ -10,17 +10,14 @@ router.use(authController.protect);
 router
   .route("/")
   .get(categoryController.getAllCategories)
-  .post(
-    authController.restrictTo("admin"),
-    upload.single("imageCover"),
-    categoryController.createCategory
-  );
+  .post(authController.restrictTo("admin"), categoryController.createCategory);
 router
   .route("/:id")
   .get(categoryController.getCategoryById)
   .patch(
     authController.restrictTo("admin"),
-    upload.single("imageCover"),
+    categoryController.uploadCategoryPhoto,
+    categoryController.resizeCategoryPhoto,
     categoryController.updateCategoy
   )
   .delete(

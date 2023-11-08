@@ -3,16 +3,38 @@ const morgan = require("morgan");
 const AppError = require("./utils/appError");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
+const passport = require("passport");
+const expressSession = require("express-session");
+const cors = require("cors");
 
 const app = express();
+// new
+const corsOptions = {
+  origin: process.env.CORS_ACCESS,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.use(
+  expressSession({
+    secret: process.env.SESSION_SECRET,
+    resave: true,
+    saveUninitialized: true,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 //MIDDLEWARE
+require("./controllers/passport");
 app.use(cookieParser());
 app.use(express.json());
 if (process.env.NODE_ENV === "development") app.use(morgan("dev"));
 
 // ROUTES
+
 app.use("/api/v1/user", require("./routes/userRoute"));
+app.use("/api/v1/auth", require("./routes/authRoute"));
 app.use("/api/v1/category", require("./routes/categoryRoute"));
 app.use("/api/v1/product", require("./routes/productRoute"));
 app.use("/api/v1/review", require("./routes/reviewRoute"));
@@ -24,6 +46,7 @@ app.all("*", (req, res, next) => {
 });
 
 const sendErrorDev = (err, res) => {
+  console.log(err);
   res.status(err.statusCode).json({
     status: err.status,
     error: err,

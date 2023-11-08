@@ -19,7 +19,12 @@ router
 router
   .route("/:id")
   .get(productController.getProductById)
-  .patch(authController.restrictTo("admin"), productController.updateProduct)
+  .patch(
+    authController.restrictTo("admin"),
+    productController.uploadProductImages,
+    productController.resizeProductImages,
+    productController.updateProduct
+  )
   .delete(authController.restrictTo("admin"), productController.deleteProduct);
 
 router

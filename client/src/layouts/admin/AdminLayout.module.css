@@ -1,0 +1,17 @@
+.cart{
+    color: white;
+    cursor: pointer;
+    font-size: 25px;
+}
+.cart:hover{
+    color: antiquewhite;
+}
+.nav_link{
+    cursor: pointer;
+    color: rgb(240, 240, 240);
+    margin-left: 20px;
+    margin-right: 20px;
+}
+.nav_link:hover{
+    color: antiquewhite;
+}

@@ -13,7 +13,10 @@ const categorySchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  imageCover: String,
+  photo: {
+    type: String,
+    default: "default.jpg",
+  },
   parentCategory: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "categories",
