@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import request from "../../services/request";
 import { Spin } from "antd";
+import errroHandler from "../../utils/errorHandler";
 
 const ProfilePage = () => {
   const [isLoading, setIsloading] = useState(false);
@@ -14,7 +15,7 @@ const ProfilePage = () => {
         setProfile(response.data.user);
         setIsloading(false);
       } catch (error) {
-        console.log(error);
+        errroHandler(error);
       }
     };
 

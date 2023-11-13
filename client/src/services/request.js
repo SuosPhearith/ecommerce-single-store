@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseUrl = process.env.API_URI;
+const baseUrl = process.env.REACT_APP_API_URI;
 
 const makeAuthenticatedRequest = async (
   method,
@@ -17,7 +17,7 @@ const makeAuthenticatedRequest = async (
   try {
     const response = await axios({
       method: method,
-      url: "http://localhost:8080/api/v1/" + url,
+      url: baseUrl + url, // Explicitly use baseUrl here
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -47,12 +47,9 @@ const makeAuthenticatedRequest = async (
 const refreshToken = (method, url, data) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const response = await axios.get(
-        "http://localhost:8080/api/v1/auth/refresh",
-        {
-          withCredentials: true, // Include this line to enable credentials
-        }
-      );
+      const response = await axios.get(baseUrl + "auth/refresh", {
+        withCredentials: true, // Include this line to enable credentials
+      });
       console.log(response);
 
       const access_token = localStorage.setItem(

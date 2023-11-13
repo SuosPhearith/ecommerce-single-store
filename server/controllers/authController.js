@@ -3,7 +3,7 @@ const catchAsync = require("express-async-handler");
 const AppError = require("../utils/appError");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const Account = require("../models/accountModel");
+const crypto = require("crypto");
 
 // generateToken
 const generateToken = (id) => {
@@ -74,19 +74,6 @@ const login = catchAsync(async (req, res) => {
   } else {
     throw new AppError("Incorrect password", 400);
   }
-});
-// login social media
-const loginSocialMeia = catchAsync(async (req, res) => {
-  const user = req.user;
-  const refreshToken = generateRefreshToken(user.id);
-  res.cookie("refreshToken", refreshToken, {
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    maxAge: process.env.REFRESH_TOKEN_EXPIRES_DATE * 24 * 60 * 60 * 1000,
-  });
-  res.redirect(process.env.CLIENT_HOME);
 });
 // logout
 const logout = catchAsync(async (req, res) => {
@@ -162,9 +149,6 @@ const getLoginStatus = catchAsync(async (req, res) => {
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
 
     let user = await User.findOne({ _id: decoded.id }).select("+active");
-    if (user === null) {
-      user = await Account.findOne({ _id: decoded.id }).select("+active");
-    }
     if (!user.active) {
       return res.status(401).json({
         status: "fail",
@@ -219,9 +203,6 @@ const refresh = catchAsync(async (req, res) => {
   const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
   // check user is still exist
   let currentUser = await User.findOne({ _id: decoded.id }).select("+active");
-  if (currentUser === null) {
-    currentUser = await Account.findOne({ _id: decoded.id }).select("+active");
-  }
   // continue
   if (!currentUser) {
     throw new AppError(
@@ -234,6 +215,35 @@ const refresh = catchAsync(async (req, res) => {
     sentToken(currentUser, res);
   }
 });
+const generateRandomPassword = (length = 12) => {
+  const characters =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+";
+  const randomBytes = crypto.randomBytes(length);
+  const passwordArray = new Array(length);
+
+  for (let i = 0; i < length; i++) {
+    passwordArray[i] = characters[randomBytes[i] % characters.length];
+  }
+
+  return passwordArray.join("");
+};
+// oauth with google
+const loginWithGoogle = catchAsync(async (req, res) => {
+  const { fullname, email, photo } = req.body;
+  const user = await User.findOne({ email }).select("+active");
+  if (user) {
+    if (!user.active) throw new AppError("account was ban", 403);
+    sentToken(user, res);
+  } else {
+    const password = generateRandomPassword();
+    const newUser = await User.create({ fullname, email, password, photo });
+    if (newUser) {
+      sentToken(newUser, res);
+    } else {
+      throw new AppError("Fail register", 400);
+    }
+  }
+});
 
 module.exports = {
   register,
@@ -244,5 +254,5 @@ module.exports = {
   getLoginStatus,
   resetPassword,
   refresh,
-  loginSocialMeia,
+  loginWithGoogle,
 };

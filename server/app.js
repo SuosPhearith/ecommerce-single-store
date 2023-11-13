@@ -3,8 +3,6 @@ const morgan = require("morgan");
 const AppError = require("./utils/appError");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
-const passport = require("passport");
-const expressSession = require("express-session");
 const cors = require("cors");
 
 const app = express();
@@ -15,18 +13,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(
-  expressSession({
-    secret: process.env.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true,
-  })
-);
-app.use(passport.initialize());
-app.use(passport.session());
 
 //MIDDLEWARE
-require("./controllers/passport");
 app.use(cookieParser());
 app.use(express.json());
 if (process.env.NODE_ENV === "development") app.use(morgan("dev"));

@@ -1,30 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { BsCart4 } from "react-icons/bs";
 import style from "./CustomerLayout.module.css";
 import { Link } from "react-router-dom";
 import { Modal, Spin } from "antd";
-import request from "../../services/request";
-import localhostStorageClear from "../../utils/localstorageClear";
+import logout from "../../utils/logout";
 
 const CustomerLayout = ({ children }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const fullname = localStorage.getItem("fullname");
-  const represent = localStorage.getItem("fullname")?.substring(0, 1);
+  const photo = localStorage.getItem("photo");
   const [isLoading, setIsloading] = useState(false);
-  const logout = async () => {
-    setIsloading(true);
-    try {
-      await request("get", "auth/logout");
-      setIsModalOpen(false);
-      setIsloading(false);
-      window.location.href = "/";
-      localhostStorageClear();
-    } catch (error) {
-      console.log(error);
-    }
-  };
   const handleOk = () => {
+    setIsloading(true);
     logout();
+    setIsloading(false);
   };
   const handleCancel = () => {
     setIsModalOpen(false);
@@ -62,20 +51,20 @@ const CustomerLayout = ({ children }) => {
                 className={style.nav_link}
                 onClick={() => setIsModalOpen(true)}
               >
-                <div className={style.profile}>{represent}</div>
+                <img className={style.profile} src={photo} alt="img"></img>
               </li>
             </ul>
           </div>
         </div>
       </nav>
       <Modal
-        title="Profile"
         open={isModalOpen}
         onCancel={handleCancel}
         footer={false}
+        width="250px"
       >
         <div className={style.wrapper}>
-          <img className={style.profile_image} src="" alt=""></img>
+          <img className={style.profile_image} src={photo} alt="img"></img>
           <div className={style.profile_fullname}>{fullname}</div>
           <Link to="/user" onClick={() => setIsModalOpen(false)}>
             <button className={style.profile_detail}>Detail</button>

@@ -1,41 +1,56 @@
 import { Link } from "react-router-dom";
-import styles from "./styles.module.css";
-import axios from "axios";
+import styles from "./RegisterPage.module.css";
+import GoogleOAuth from "../../components/googleOAuth/GoogleOAuth";
+import FacebookOAuth from "../../components/facebookOAuth/FacebookOAuth";
 import { useState } from "react";
+import request from "../../services/request";
+import { useNavigate } from "react-router-dom";
 import { message } from "antd";
+import errroHandler from "../../utils/errorHandler";
 
 function Signup() {
+  const navigate = useNavigate();
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const googleAuth = () => {
-    window.open(`http://localhost:8080/api/v1/auth/google`, "_self");
-  };
-  const facebookAuth = () => {
-    window.open(`http://localhost:8080/api/v1/auth/facebook`, "_self");
-  };
   const createUser = async () => {
+    if (validate()) return;
     try {
-      const newUser = await axios.post(
-        "http://localhost:8080/api/v1/auth/register",
-        {
-          fullname,
-          email,
-          password,
-        },
-        { withCredentials: true }
-      );
-      setEmail("");
-      setFullname("");
-      setPassword("");
-      message.success("success");
+      await request("POST", "auth/register", {
+        fullname,
+        email,
+        password,
+      });
+      navigate("/login");
     } catch (error) {
-      message.error("error");
+      errroHandler(error);
     }
+  };
+  const validate = () => {
+    if (!fullname) {
+      message.error("All fields are required");
+      return true;
+    }
+    if (fullname.length < 3) {
+      message.error("Fullname at least 3 letters");
+      return true;
+    }
+    if (!email) {
+      message.error("All fields are required");
+      return true;
+    }
+    if (!password) {
+      message.error("All fields are required");
+      return true;
+    }
+    if (password.length < 6) {
+      message.error("Password at least 6 letters");
+      return true;
+    }
+    return false;
   };
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Sign up Form</h1>
       <div className={styles.form_container}>
         <div className={styles.left}>
           <img className={styles.img} src="./images/signup.jpg" alt="signup" />
@@ -67,14 +82,8 @@ function Signup() {
             Sign Up
           </button>
           <p className={styles.text}>or</p>
-          <button className={styles.google_btn} onClick={googleAuth}>
-            <img src="./images/google.png" alt="google icon" />
-            <span>Sing up with Google</span>
-          </button>
-          <button className={styles.google_btn} onClick={facebookAuth}>
-            <img src="./images/facebook.jpg" alt="google icon" />
-            <span>Sing up with Facebook</span>
-          </button>
+          <GoogleOAuth />
+          <FacebookOAuth />
           <p className={styles.text}>
             Already Have Account ? <Link to="/login">Log In</Link>
           </p>
